@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "codex/**"
+      - "strawpot_codex/**"
+      - ".goreleaser.yaml"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Auto-increment tag
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        id: tag
+        run: |
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [ -z "$latest" ]; then
+            next="v0.1.0"
+          else
+            # Increment patch version
+            next=$(echo "$latest" | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
+          fi
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          git tag "$next"
+          git push origin "$next"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: codex/wrapper/go.mod
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: ${{ github.event_name == 'workflow_dispatch' && 'build --snapshot --clean' || 'release --clean' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
