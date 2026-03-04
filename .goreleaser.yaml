@@ -1,0 +1,25 @@
+version: 2
+
+builds:
+  - dir: codex/wrapper
+    main: .
+    binary: strawpot_codex
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - formats: [binary]
+    name_template: "strawpot_codex-{{ .Os }}-{{ .Arch }}"
+
+release:
+  github:
+    owner: strawpot
+    name: strawpot_codex_cli
