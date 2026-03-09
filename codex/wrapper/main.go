@@ -71,8 +71,9 @@ type buildArgs struct {
 	MemoryPrompt      string
 	Task              string
 	Config            string
-	SkillsDir         string
+	SkillsDirs        []string
 	RolesDirs         []string
+	FilesDirs         []string
 }
 
 func parseBuildArgs(args []string) buildArgs {
@@ -107,10 +108,13 @@ func parseBuildArgs(args []string) buildArgs {
 			ba.Config = args[i]
 		case "--skills-dir":
 			i++
-			ba.SkillsDir = args[i]
+			ba.SkillsDirs = append(ba.SkillsDirs, args[i])
 		case "--roles-dir":
 			i++
 			ba.RolesDirs = append(ba.RolesDirs, args[i])
+		case "--files-dir":
+			i++
+			ba.FilesDirs = append(ba.FilesDirs, args[i])
 		}
 	}
 	return ba
@@ -157,9 +161,12 @@ func cmdBuild(args []string) {
 		os.Exit(1)
 	}
 
-	// Symlink each subdirectory in skills-dir into skills/<name>/
-	if ba.SkillsDir != "" {
-		entries, err := os.ReadDir(ba.SkillsDir)
+	// Symlink each subdirectory from each skills-dir into skills/<name>/
+	for _, skillsDir := range ba.SkillsDirs {
+		if skillsDir == "" {
+			continue
+		}
+		entries, err := os.ReadDir(skillsDir)
 		if err == nil && len(entries) > 0 {
 			skillsTarget := filepath.Join(ba.AgentWorkspaceDir, "skills")
 			if err := os.MkdirAll(skillsTarget, 0o755); err != nil {
@@ -170,8 +177,11 @@ func cmdBuild(args []string) {
 				if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
 					continue
 				}
-				src := filepath.Join(ba.SkillsDir, entry.Name())
+				src := filepath.Join(skillsDir, entry.Name())
 				link := filepath.Join(skillsTarget, entry.Name())
+				if _, err := os.Lstat(link); err == nil {
+					continue
+				}
 				if err := symlink(src, link); err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to link skill %s: %v\n", entry.Name(), err)
 					os.Exit(1)
@@ -243,6 +253,13 @@ func cmdBuild(args []string) {
 
 	// Single --add-dir pointing to the agent workspace.
 	cmd = append(cmd, "--add-dir", ba.AgentWorkspaceDir)
+
+	// Add project files directories if provided
+	for _, filesDir := range ba.FilesDirs {
+		if filesDir != "" {
+			cmd = append(cmd, "--add-dir", filesDir)
+		}
+	}
 
 	// Output JSON
 	result := map[string]interface{}{
