@@ -44,8 +44,8 @@ func TestParseBuildArgs_AllFlags(t *testing.T) {
 	if ba.Config != `{"model":"o3"}` {
 		t.Errorf("Config = %q, want %q", ba.Config, `{"model":"o3"}`)
 	}
-	if ba.SkillsDir != "/skills" {
-		t.Errorf("SkillsDir = %q, want %q", ba.SkillsDir, "/skills")
+	if len(ba.SkillsDirs) != 1 || ba.SkillsDirs[0] != "/skills" {
+		t.Errorf("SkillsDirs = %v, want [/skills]", ba.SkillsDirs)
 	}
 	if len(ba.RolesDirs) != 2 || ba.RolesDirs[0] != "/roles1" || ba.RolesDirs[1] != "/roles2" {
 		t.Errorf("RolesDirs = %v, want [/roles1 /roles2]", ba.RolesDirs)
