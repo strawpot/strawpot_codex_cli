@@ -40,14 +40,14 @@ strawpot_codex build \
   --agent-workspace-dir /path/to/workspace \
   --working-dir /path/to/project \
   --task "fix the bug" \
-  --config '{"model":"gpt-5.2-codex"}'
+  --config '{"model":"o4-mini"}'
 ```
 
 Output:
 
 ```json
 {
-  "cmd": ["codex", "exec", "fix the bug", "-c", "model_instructions_file=\"/path/to/workspace/prompt.md\"", "-m", "gpt-5.2-codex", "--dangerously-bypass-approvals-and-sandbox", "-C", "/path/to/project", "--add-dir", "/path/to/workspace"],
+  "cmd": ["codex", "exec", "fix the bug", "-c", "model_instructions_file=\"/path/to/workspace/prompt.md\"", "-m", "o4-mini", "--dangerously-bypass-approvals-and-sandbox", "-C", "/path/to/project", "--add-dir", "/path/to/workspace"],
   "cwd": "/path/to/project"
 }
 ```
@@ -74,7 +74,7 @@ Pass via `--config`:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `model` | string | `gpt-5.2-codex` | Model to use |
+| `model` | string | _(none)_ | Model override (omit to use codex CLI default) |
 | `dangerously_skip_permissions` | boolean | `true` | Bypass all approvals and sandbox (`--dangerously-bypass-approvals-and-sandbox`). Set to `false` to require approval. |
 
 ### Environment variables
