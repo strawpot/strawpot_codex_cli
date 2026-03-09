@@ -18,8 +18,7 @@ metadata:
     params:
       model:
         type: string
-        default: gpt-5.2-codex
-        description: Model to use for Codex CLI
+        description: Model override (omit to use codex CLI default)
       dangerously_skip_permissions:
         type: boolean
         default: true
