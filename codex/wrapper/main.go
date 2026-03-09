@@ -10,6 +10,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -166,7 +167,7 @@ func cmdBuild(args []string) {
 				os.Exit(1)
 			}
 			for _, entry := range entries {
-				if !entry.IsDir() {
+				if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
 					continue
 				}
 				src := filepath.Join(ba.SkillsDir, entry.Name())
@@ -194,7 +195,7 @@ func cmdBuild(args []string) {
 			os.Exit(1)
 		}
 		for _, entry := range entries {
-			if !entry.IsDir() {
+			if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
 				continue
 			}
 			src := filepath.Join(rolesDir, entry.Name())
