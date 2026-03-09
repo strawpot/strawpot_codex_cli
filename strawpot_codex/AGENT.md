@@ -2,7 +2,6 @@
 name: strawpot-codex
 description: OpenAI Codex CLI agent
 metadata:
-  version: "0.1.0"
   strawpot:
     bin:
       macos: strawpot_codex
