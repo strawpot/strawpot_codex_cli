@@ -15,7 +15,7 @@ func TestParseBuildArgs_AllFlags(t *testing.T) {
 		"--role-prompt", "You are a helper",
 		"--memory-prompt", "Remember this",
 		"--task", "do something",
-		"--config", `{"model":"o3"}`,
+		"--config", `{"model":"gpt-5.2-codex"}`,
 		"--skills-dir", "/skills",
 		"--roles-dir", "/roles1",
 		"--roles-dir", "/roles2",
@@ -41,8 +41,8 @@ func TestParseBuildArgs_AllFlags(t *testing.T) {
 	if ba.Task != "do something" {
 		t.Errorf("Task = %q, want %q", ba.Task, "do something")
 	}
-	if ba.Config != `{"model":"o3"}` {
-		t.Errorf("Config = %q, want %q", ba.Config, `{"model":"o3"}`)
+	if ba.Config != `{"model":"gpt-5.2-codex"}` {
+		t.Errorf("Config = %q, want %q", ba.Config, `{"model":"gpt-5.2-codex"}`)
 	}
 	if len(ba.SkillsDirs) != 1 || ba.SkillsDirs[0] != "/skills" {
 		t.Errorf("SkillsDirs = %v, want [/skills]", ba.SkillsDirs)
@@ -122,7 +122,7 @@ func TestCmdBuild_WithTaskAndModel(t *testing.T) {
 		"--agent-workspace-dir", wsDir,
 		"--working-dir", "/project",
 		"--task", "fix the bug",
-		"--config", `{"model":"o3"}`,
+		"--config", `{"model":"gpt-5.2-codex"}`,
 	}
 
 	output := captureBuildOutput(t, args)
@@ -138,7 +138,7 @@ func TestCmdBuild_WithTaskAndModel(t *testing.T) {
 	if len(cmd) < 3 || cmd[2] != "fix the bug" {
 		t.Errorf("cmd[2] = %v, want %q", cmd[2], "fix the bug")
 	}
-	assertSequence(t, cmd, "-m", "o3")
+	assertSequence(t, cmd, "-m", "gpt-5.2-codex")
 }
 
 func TestCmdBuild_PromptFile(t *testing.T) {
