@@ -12,9 +12,10 @@ case "$OS" in
   *) echo "Unsupported OS: $OS" >&2; exit 1 ;;
 esac
 
-# Default install directory
+# Default install directory — current working directory.
+# When run by strawhub, INSTALL_DIR is set to the package directory.
 if [ -z "$INSTALL_DIR" ]; then
-  INSTALL_DIR="/usr/local/bin"
+  INSTALL_DIR="$(pwd)"
 fi
 
 # Detect architecture
@@ -44,8 +45,8 @@ mkdir -p "$INSTALL_DIR"
 if [ -w "$INSTALL_DIR" ]; then
   mv "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
 else
-  echo "Moving to ${INSTALL_DIR} (requires sudo)..."
-  sudo mv "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+  echo "Error: cannot write to ${INSTALL_DIR}" >&2
+  exit 1
 fi
 
 echo "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
