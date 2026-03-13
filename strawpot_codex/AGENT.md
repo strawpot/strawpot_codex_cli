@@ -10,6 +10,8 @@ metadata:
       macos: curl -fsSL https://raw.githubusercontent.com/strawpot/strawpot_codex_cli/main/strawpot_codex/install.sh | sh
       linux: curl -fsSL https://raw.githubusercontent.com/strawpot/strawpot_codex_cli/main/strawpot_codex/install.sh | sh
     tools:
+      npm:
+        description: Node.js package manager (https://nodejs.org)
       codex:
         description: OpenAI Codex CLI
         install:
