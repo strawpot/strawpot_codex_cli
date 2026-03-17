@@ -231,6 +231,9 @@ func cmdBuild(args []string) {
 	// Build codex command
 	cmd := []string{"codex", "exec"}
 
+	// JSON output for machine parsing (suppresses prompt echo)
+	cmd = append(cmd, "--json")
+
 	if ba.Task != "" {
 		cmd = append(cmd, ba.Task)
 	}
