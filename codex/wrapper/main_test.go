@@ -134,9 +134,9 @@ func TestCmdBuild_WithTaskAndModel(t *testing.T) {
 
 	cmd := result["cmd"].([]interface{})
 
-	// Task is positional after "codex exec"
-	if len(cmd) < 3 || cmd[2] != "fix the bug" {
-		t.Errorf("cmd[2] = %v, want %q", cmd[2], "fix the bug")
+	// Task is positional after "codex exec --json"
+	if len(cmd) < 4 || cmd[3] != "fix the bug" {
+		t.Errorf("cmd[3] = %v, want %q", cmd[3], "fix the bug")
 	}
 	assertSequence(t, cmd, "-m", "gpt-5.2-codex")
 }
