@@ -5,6 +5,7 @@
 *.so
 *.dylib
 codex/strawpot_codex
+codex/wrapper/wrapper
 
 # Test binary
 *.test
