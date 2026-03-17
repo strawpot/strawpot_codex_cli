@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -96,12 +97,19 @@ func TestCmdBuild_MinimalArgs(t *testing.T) {
 		t.Fatal("Missing 'cmd' in output")
 	}
 
-	if len(cmd) < 2 || cmd[0] != "codex" || cmd[1] != "exec" {
-		t.Errorf("cmd should start with [codex, exec], got %v", cmd[:2])
+	// cmd is now ["sh", "-c", "<shell pipeline>"]
+	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
+		t.Fatalf("cmd should be [sh, -c, <shell>], got %v", cmd)
 	}
-	assertContains(t, cmd, "--add-dir")
-	assertContains(t, cmd, wsDir)
-	assertSequence(t, cmd, "-C", "/project")
+
+	shell := cmd[2].(string)
+	assertShellContains(t, shell, "'codex' 'exec'")
+	assertShellContains(t, shell, "--json")
+	assertShellContains(t, shell, "--add-dir")
+	assertShellContains(t, shell, wsDir)
+	assertShellContains(t, shell, "'-C' '/project'")
+	assertShellContains(t, shell, "| ")
+	assertShellContains(t, shell, "filter")
 
 	if result["cwd"] != "/project" {
 		t.Errorf("cwd = %v, want /project", result["cwd"])
@@ -132,13 +140,9 @@ func TestCmdBuild_WithTaskAndModel(t *testing.T) {
 		t.Fatalf("Failed to parse JSON output: %v", err)
 	}
 
-	cmd := result["cmd"].([]interface{})
-
-	// Task is positional after "codex exec --json"
-	if len(cmd) < 4 || cmd[3] != "fix the bug" {
-		t.Errorf("cmd[3] = %v, want %q", cmd[3], "fix the bug")
-	}
-	assertSequence(t, cmd, "-m", "gpt-5.2-codex")
+	shell := result["cmd"].([]interface{})[2].(string)
+	assertShellContains(t, shell, "'fix the bug'")
+	assertShellContains(t, shell, "'-m' 'gpt-5.2-codex'")
 }
 
 func TestCmdBuild_PromptFile(t *testing.T) {
@@ -151,7 +155,7 @@ func TestCmdBuild_PromptFile(t *testing.T) {
 		"--memory-prompt", "Use Go",
 	}
 
-	output := captureBuildOutput(t, args)
+	captureBuildOutput(t, args)
 
 	content, err := os.ReadFile(filepath.Join(wsDir, "prompt.md"))
 	if err != nil {
@@ -163,26 +167,13 @@ func TestCmdBuild_PromptFile(t *testing.T) {
 		t.Errorf("prompt.md = %q, want %q", string(content), expected)
 	}
 
-	// Verify -c model_instructions_file is in cmd
+	// Verify -c model_instructions_file is in the shell command
+	output := captureBuildOutput(t, args)
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
-	cmd := result["cmd"].([]interface{})
-	assertContains(t, cmd, "-c")
-
-	// Find the model_instructions_file config value
-	found := false
-	for i, v := range cmd {
-		if v == "-c" && i+1 < len(cmd) {
-			val, ok := cmd[i+1].(string)
-			if ok && len(val) > 25 && val[:25] == "model_instructions_file=\"" {
-				found = true
-				break
-			}
-		}
-	}
-	if !found {
-		t.Errorf("cmd %v does not contain -c model_instructions_file=...", cmd)
-	}
+	shell := result["cmd"].([]interface{})[2].(string)
+	assertShellContains(t, shell, "'-c'")
+	assertShellContains(t, shell, "model_instructions_file=")
 }
 
 func TestCmdBuild_NoPromptFlag_WhenEmpty(t *testing.T) {
@@ -197,16 +188,11 @@ func TestCmdBuild_NoPromptFlag_WhenEmpty(t *testing.T) {
 
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
-	cmd := result["cmd"].([]interface{})
+	shell := result["cmd"].([]interface{})[2].(string)
 
-	// Should NOT contain -c model_instructions_file when no prompts provided
-	for i, v := range cmd {
-		if v == "-c" && i+1 < len(cmd) {
-			val, ok := cmd[i+1].(string)
-			if ok && len(val) >= 25 && val[:25] == "model_instructions_file=\"" {
-				t.Error("cmd should NOT contain -c model_instructions_file when no prompts provided")
-			}
-		}
+	// Should NOT contain model_instructions_file when no prompts provided
+	if strings.Contains(shell, "model_instructions_file=") {
+		t.Error("shell cmd should NOT contain model_instructions_file when no prompts provided")
 	}
 }
 
@@ -299,9 +285,8 @@ func TestCmdBuild_SandboxMode(t *testing.T) {
 
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
-
-	cmd := result["cmd"].([]interface{})
-	assertSequence(t, cmd, "--sandbox", "workspace-write")
+	shell := result["cmd"].([]interface{})[2].(string)
+	assertShellContains(t, shell, "'--sandbox' 'workspace-write'")
 }
 
 func TestCmdBuild_DangerouslyBypass_Default(t *testing.T) {
@@ -316,9 +301,8 @@ func TestCmdBuild_DangerouslyBypass_Default(t *testing.T) {
 
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
-
-	cmd := result["cmd"].([]interface{})
-	assertContains(t, cmd, "--dangerously-bypass-approvals-and-sandbox")
+	shell := result["cmd"].([]interface{})[2].(string)
+	assertShellContains(t, shell, "--dangerously-bypass-approvals-and-sandbox")
 }
 
 func TestCmdBuild_DangerouslyBypass_ExplicitTrue(t *testing.T) {
@@ -334,9 +318,8 @@ func TestCmdBuild_DangerouslyBypass_ExplicitTrue(t *testing.T) {
 
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
-
-	cmd := result["cmd"].([]interface{})
-	assertContains(t, cmd, "--dangerously-bypass-approvals-and-sandbox")
+	shell := result["cmd"].([]interface{})[2].(string)
+	assertShellContains(t, shell, "--dangerously-bypass-approvals-and-sandbox")
 }
 
 func TestCmdBuild_DangerouslyBypass_Disabled(t *testing.T) {
@@ -352,12 +335,51 @@ func TestCmdBuild_DangerouslyBypass_Disabled(t *testing.T) {
 
 	var result map[string]interface{}
 	json.Unmarshal(output, &result)
+	shell := result["cmd"].([]interface{})[2].(string)
+	if strings.Contains(shell, "--dangerously-bypass-approvals-and-sandbox") {
+		t.Error("shell cmd should NOT contain --dangerously-bypass-approvals-and-sandbox when disabled")
+	}
+}
 
-	cmd := result["cmd"].([]interface{})
-	for _, v := range cmd {
-		if v == "--dangerously-bypass-approvals-and-sandbox" {
-			t.Error("cmd should NOT contain --dangerously-bypass-approvals-and-sandbox when disabled")
-		}
+func TestCmdFilter(t *testing.T) {
+	// Simulate JSONL input with mixed event types
+	input := strings.Join([]string{
+		`{"type":"thread.started","thread_id":"abc"}`,
+		`{"type":"turn.started"}`,
+		`{"type":"item.completed","item":{"type":"reasoning","text":"thinking..."}}`,
+		`{"type":"item.completed","item":{"type":"command_execution","command":"ls"}}`,
+		`{"type":"item.completed","item":{"type":"agent_message","text":"Hello, here is the result."}}`,
+		`{"type":"turn.completed","usage":{"input_tokens":100}}`,
+	}, "\n")
+
+	// Pipe input through cmdFilter
+	oldStdin := os.Stdin
+	oldStdout := os.Stdout
+
+	inR, inW, _ := os.Pipe()
+	outR, outW, _ := os.Pipe()
+	os.Stdin = inR
+	os.Stdout = outW
+
+	go func() {
+		inW.WriteString(input)
+		inW.Close()
+	}()
+
+	cmdFilter()
+
+	outW.Close()
+	os.Stdin = oldStdin
+	os.Stdout = oldStdout
+
+	var buf [4096]byte
+	n, _ := outR.Read(buf[:])
+	outR.Close()
+
+	got := strings.TrimSpace(string(buf[:n]))
+	want := "Hello, here is the result."
+	if got != want {
+		t.Errorf("filter output = %q, want %q", got, want)
 	}
 }
 
@@ -386,22 +408,9 @@ func captureBuildOutput(t *testing.T, args []string) []byte {
 	return buf[:n]
 }
 
-func assertContains(t *testing.T, slice []interface{}, val string) {
+func assertShellContains(t *testing.T, shell, substr string) {
 	t.Helper()
-	for _, v := range slice {
-		if v == val {
-			return
-		}
+	if !strings.Contains(shell, substr) {
+		t.Errorf("shell cmd %q does not contain %q", shell, substr)
 	}
-	t.Errorf("cmd %v does not contain %q", slice, val)
-}
-
-func assertSequence(t *testing.T, slice []interface{}, key, val string) {
-	t.Helper()
-	for i, v := range slice {
-		if v == key && i+1 < len(slice) && slice[i+1] == val {
-			return
-		}
-	}
-	t.Errorf("cmd %v does not contain %q %q in sequence", slice, key, val)
 }

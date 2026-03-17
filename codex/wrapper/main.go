@@ -4,10 +4,11 @@
 // to "codex" CLI flags.  It does NOT manage processes, sessions, or any
 // infrastructure — that is handled by WrapperRuntime in StrawPot core.
 //
-// Subcommands: setup, build
+// Subcommands: setup, build, filter
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -28,6 +29,8 @@ func main() {
 		cmdSetup()
 	case "build":
 		cmdBuild(os.Args[2:])
+	case "filter":
+		cmdFilter()
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", os.Args[1])
 		os.Exit(1)
@@ -63,6 +66,30 @@ func cmdSetup() {
 			os.Exit(exitErr.ExitCode())
 		}
 		os.Exit(1)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// filter — reads Codex JSONL from stdin, emits only agent_message text
+// ---------------------------------------------------------------------------
+
+func cmdFilter() {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1 MB lines
+	for scanner.Scan() {
+		var event struct {
+			Type string `json:"type"`
+			Item struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"item"`
+		}
+		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
+			continue
+		}
+		if event.Type == "item.completed" && event.Item.Type == "agent_message" {
+			fmt.Println(event.Item.Text)
+		}
 	}
 }
 
@@ -271,9 +298,19 @@ func cmdBuild(args []string) {
 		}
 	}
 
+	// Resolve wrapper binary path for the filter pipe.
+	wrapperBin, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to resolve wrapper path: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Build shell command that pipes codex JSONL through the filter.
+	shellCmd := shellJoin(cmd) + " | " + shellEscape(wrapperBin) + " filter"
+
 	// Output JSON
 	result := map[string]interface{}{
-		"cmd": cmd,
+		"cmd": []string{"sh", "-c", shellCmd},
 		"cwd": ba.WorkingDir,
 	}
 
@@ -282,4 +319,18 @@ func cmdBuild(args []string) {
 		fmt.Fprintf(os.Stderr, "Failed to encode JSON: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// shellEscape wraps a string in single quotes for sh.
+func shellEscape(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+}
+
+// shellJoin quotes and joins args for sh -c.
+func shellJoin(args []string) string {
+	escaped := make([]string, len(args))
+	for i, a := range args {
+		escaped[i] = shellEscape(a)
+	}
+	return strings.Join(escaped, " ")
 }
