@@ -43,7 +43,12 @@ chmod +x "${BINARY_NAME}"
 mkdir -p "$INSTALL_DIR"
 
 if [ -w "$INSTALL_DIR" ]; then
-  mv "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+  # Skip mv when already downloaded into the install directory (e.g. strawhub sets cwd = INSTALL_DIR)
+  SRC="$(cd "$(dirname "${BINARY_NAME}")" && pwd)/$(basename "${BINARY_NAME}")"
+  DST="$(cd "$INSTALL_DIR" && pwd)/${BINARY_NAME}"
+  if [ "$SRC" != "$DST" ]; then
+    mv "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+  fi
 else
   echo "Error: cannot write to ${INSTALL_DIR}" >&2
   exit 1
