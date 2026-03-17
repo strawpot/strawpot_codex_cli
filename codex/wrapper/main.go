@@ -46,10 +46,17 @@ func cmdSetup() {
 		os.Exit(1)
 	}
 
+	fmt.Fprintln(os.Stderr, "Starting Codex CLI login...")
+	fmt.Fprintln(os.Stderr, "If a browser window does not open, copy the URL from the output below.")
+	fmt.Fprintln(os.Stderr)
+
 	cmd := exec.Command(codexPath, "login")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	// Inherit full environment so DISPLAY/WAYLAND_DISPLAY are available
+	// for browser opening on Linux.
+	cmd.Env = os.Environ()
 
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
